@@ -639,9 +639,9 @@ def create_csv_export(schedule, player_names):
     return df.to_csv(index=False)
 
 def main():
-    st.title("🏓 Pickleball Doubles Round Robin Scramble")
-    st.write("Generate balanced schedules for your pickleball doubles sessions!")
-    st.info("🎾 **Doubles Format**: Each game has 4 players (2 vs 2). Fair game distribution guaranteed!")
+    st.title("🏓 Sheena's Round Robin Scramble")
+    st.write("Algorithm Priority: Fair Game Distribution + Fun & Balanced Matchups")
+    st.info("🎾 **Doubles Format**: 2 vs 2 Only")
     
     # Sidebar controls
     st.sidebar.header("⚙️ Settings")
