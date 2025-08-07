@@ -478,8 +478,8 @@ def analyze_performance_from_scores():
     return performance_levels
 
 def display_schedule_with_scoring(schedule, player_names):
-    """Display the schedule with scoring interface"""
-    st.header("🏓 Doubles Games Schedule & Scoring")
+    """Display the schedule with scoring interface - mobile optimized"""
+    st.header("🏓 Schedule & Scoring")
     
     if 'game_results' not in st.session_state:
         st.session_state.game_results = {}
@@ -491,22 +491,20 @@ def display_schedule_with_scoring(schedule, player_names):
         bench = round_data.get('bench', [])
         is_manual = round_data.get('manual', False)
         
-        manual_indicator = " 🎮 (Manual)" if is_manual else " 🤖 (Auto)"
-        st.subheader(f"Round {round_num} ({(round_num-1)*15} - {round_num*15} minutes){manual_indicator}")
+        manual_indicator = " 🎮" if is_manual else " 🤖"
+        st.subheader(f"Round {round_num} ({(round_num-1)*15}-{round_num*15}min){manual_indicator}")
         
         if games:
-            cols = st.columns(len(games))
-            
-            for i, game in enumerate(games):
-                with cols[i]:
-                    st.markdown(f"**🏓 Court {game['court']} - Doubles**")
-                    st.markdown(f"**Team A:** {game['team1'][0]} & {game['team1'][1]}")
-                    st.markdown("**vs**")
-                    st.markdown(f"**Team B:** {game['team2'][0]} & {game['team2'][1]}")
+            # Use single column for mobile
+            for game in games:
+                with st.container():
+                    # Compact one-line format
+                    st.markdown(f"**Court {game['court']}:** {game['team1'][0]} & {game['team1'][1]} vs {game['team2'][0]} & {game['team2'][1]}")
                     
                     game_key = f"r{round_num}_c{game['court']}"
                     
-                    col1, col2 = st.columns(2)
+                    # Compact scoring in three columns
+                    col1, col2, col3 = st.columns([1, 1, 2])
                     with col1:
                         team_a_score = st.number_input("A", min_value=0, max_value=50,
                                                      value=st.session_state.game_results.get(game_key, {}).get('team_a_score', 0),
@@ -515,143 +513,137 @@ def display_schedule_with_scoring(schedule, player_names):
                         team_b_score = st.number_input("B", min_value=0, max_value=50,
                                                      value=st.session_state.game_results.get(game_key, {}).get('team_b_score', 0),
                                                      key=f"score_b_{game_key}")
-                    
-                    if team_a_score > 0 or team_b_score > 0:
-                        winner_team = "Team A" if team_a_score > team_b_score else "Team B" if team_b_score > team_a_score else "Tie"
-                        
-                        st.session_state.game_results[game_key] = {
-                            'round': round_num, 'court': game['court'],
-                            'team_a': game['team1'], 'team_b': game['team2'],
-                            'team_a_score': team_a_score, 'team_b_score': team_b_score,
-                            'winner': winner_team,
-                            'winning_team': game['team1'] if winner_team == "Team A" else game['team2'] if winner_team == "Team B" else None
-                        }
-                        
-                        if winner_team != "Tie":
-                            winning_players = game['team1'] if winner_team == "Team A" else game['team2']
-                            st.success(f"🏆 **Winner:** {' & '.join(winning_players)} ({team_a_score}-{team_b_score})")
-                        else:
-                            st.info(f"🤝 **Tie Game** ({team_a_score}-{team_b_score})")
+                    with col3:
+                        if team_a_score > 0 or team_b_score > 0:
+                            winner_team = "Team A" if team_a_score > team_b_score else "Team B" if team_b_score > team_a_score else "Tie"
+                            
+                            st.session_state.game_results[game_key] = {
+                                'round': round_num, 'court': game['court'],
+                                'team_a': game['team1'], 'team_b': game['team2'],
+                                'team_a_score': team_a_score, 'team_b_score': team_b_score,
+                                'winner': winner_team,
+                                'winning_team': game['team1'] if winner_team == "Team A" else game['team2'] if winner_team == "Team B" else None
+                            }
+                            
+                            if winner_team != "Tie":
+                                winning_players = game['team1'] if winner_team == "Team A" else game['team2']
+                                st.success(f"🏆 {' & '.join(winning_players)}")
+                            else:
+                                st.info(f"🤝 Tie")
                     
                     st.markdown("---")
         
+        # Compact sitting display
         if bench:
-            st.markdown(f"**🪑 On Bench:** {', '.join(bench)}")
+            st.caption(f"🪑 Bench: {', '.join(bench)}")
         elif sitting:
-            st.markdown(f"**⏸️ Sitting out:** {', '.join(sitting)}")
+            st.caption(f"⏸️ Sitting: {', '.join(sitting)}")
         
         st.write("")
 
-def display_player_stats(player_stats, player_names, player_performance=None, session_hours=2):
-    """Display player statistics"""
-    st.write("**Player Statistics**")
+def display_combined_stats_and_results(player_stats, player_names, player_performance=None, session_hours=2):
+    """Display combined player statistics and tournament results"""
     
-    stats_data = []
-    total_minutes = session_hours * 60
-    
-    for player in player_names:
-        games_played = player_stats.get(player, 0)
-        performance = player_performance.get(player, 'Average') if player_performance else 'Average'
-        perf_emoji = "🔥" if performance == "Good Day" else "😓" if performance == "Bad Day" else "😐"
-        
-        stats_data.append({
-            'Player': f"{perf_emoji} {player}",
-            'Games Played': games_played,
-            'Play Time (minutes)': games_played * 15,
-            'Rest Time (minutes)': total_minutes - (games_played * 15)
-        })
-    
-    df = pd.DataFrame(stats_data)
-    st.dataframe(df, use_container_width=True)
-    
-    games_played = [stats['Games Played'] for stats in stats_data]
-    min_games = min(games_played) if games_played else 0
-    max_games = max(games_played) if games_played else 0
-    
-    col1, col2, col3, col4 = st.columns(4)
-    with col1:
-        st.metric("Min Games", min_games)
-    with col2:
-        st.metric("Max Games", max_games)
-    with col3:
-        balance_score = "Excellent" if (max_games - min_games) <= 1 else "Good" if (max_games - min_games) <= 2 else "Fair"
-        st.metric("Balance", balance_score)
-    with col4:
-        if player_performance:
-            good_count = list(player_performance.values()).count('Good Day')
-            bad_count = list(player_performance.values()).count('Bad Day')
-            st.metric("Performance Mix", "✅ Balanced" if good_count > 0 and bad_count > 0 else "⚠️ Uniform")
-
-def display_tournament_results():
-    """Display final tournament standings"""
-    if 'game_results' not in st.session_state or not st.session_state.game_results:
-        return
-    
-    st.write("**Tournament Results**")
-    
-    player_stats = defaultdict(lambda: {
+    # Get game results data
+    player_game_stats = defaultdict(lambda: {
         'games_played': 0, 'wins': 0, 'losses': 0,
         'points_for': 0, 'points_against': 0
     })
     
-    completed_games = []
-    for game_key, result in st.session_state.game_results.items():
-        if result['team_a_score'] > 0 or result['team_b_score'] > 0:
-            completed_games.append(result)
-            
-            for team, opponent_team, team_score, opponent_score in [
-                (result['team_a'], result['team_b'], result['team_a_score'], result['team_b_score']),
-                (result['team_b'], result['team_a'], result['team_b_score'], result['team_a_score'])
-            ]:
-                for player in team:
-                    stats = player_stats[player]
-                    stats['games_played'] += 1
-                    stats['points_for'] += team_score
-                    stats['points_against'] += opponent_score
-                    
-                    if team_score > opponent_score:
-                        stats['wins'] += 1
-                    elif opponent_score > team_score:
-                        stats['losses'] += 1
+    if 'game_results' in st.session_state and st.session_state.game_results:
+        for game_key, result in st.session_state.game_results.items():
+            if result['team_a_score'] > 0 or result['team_b_score'] > 0:
+                for team, opponent_team, team_score, opponent_score in [
+                    (result['team_a'], result['team_b'], result['team_a_score'], result['team_b_score']),
+                    (result['team_b'], result['team_a'], result['team_b_score'], result['team_a_score'])
+                ]:
+                    for player in team:
+                        stats = player_game_stats[player]
+                        stats['games_played'] += 1
+                        stats['points_for'] += team_score
+                        stats['points_against'] += opponent_score
+                        
+                        if team_score > opponent_score:
+                            stats['wins'] += 1
+                        elif opponent_score > team_score:
+                            stats['losses'] += 1
     
-    if completed_games:
-        standings_data = []
-        for player, stats in player_stats.items():
-            if stats['games_played'] > 0:
-                win_percentage = (stats['wins'] / stats['games_played']) * 100
-                point_differential = stats['points_for'] - stats['points_against']
-                
-                standings_data.append({
-                    'Player': player, 'Games': stats['games_played'],
-                    'Wins': stats['wins'], 'Losses': stats['losses'],
-                    'Win %': f"{win_percentage:.1f}%",
-                    'Points For': stats['points_for'],
-                    'Points Against': stats['points_against'],
-                    '+/-': point_differential
-                })
+    # Create combined data
+    combined_data = []
+    total_minutes = session_hours * 60
+    
+    for player in player_names:
+        games_scheduled = player_stats.get(player, 0)
+        performance = player_performance.get(player, 'Average') if player_performance else 'Average'
+        perf_emoji = "🔥" if performance == "Good Day" else "😓" if performance == "Bad Day" else "😐"
         
-        standings_data.sort(key=lambda x: (float(x['Win %'].replace('%', '')), x['+/-']), reverse=True)
+        game_stats = player_game_stats.get(player, {})
+        games_played = game_stats.get('games_played', 0)
+        wins = game_stats.get('wins', 0)
+        points_for = game_stats.get('points_for', 0)
+        points_against = game_stats.get('points_against', 0)
         
-        for i, player_data in enumerate(standings_data):
-            player_data['Rank'] = i + 1
+        win_percentage = (wins / games_played * 100) if games_played > 0 else 0
+        point_diff = points_for - points_against
         
-        if standings_data:
-            standings_df = pd.DataFrame(standings_data)
-            standings_df = standings_df[['Rank', 'Player', 'Games', 'Wins', 'Losses', 'Win %', 'Points For', 'Points Against', '+/-']]
-            
-            st.write("**Final Standings**")
-            st.dataframe(standings_df, use_container_width=True, hide_index=True)
-            
-            if len(standings_data) >= 3:
-                col1, col2, col3 = st.columns(3)
-                with col1:
-                    st.metric("🥇 1st Place", standings_data[0]['Player'], f"{standings_data[0]['Win %']} win rate")
-                with col2:
-                    st.metric("🥈 2nd Place", standings_data[1]['Player'], f"{standings_data[1]['Win %']} win rate")
-                with col3:
-                    st.metric("🥉 3rd Place", standings_data[2]['Player'], f"{standings_data[2]['Win %']} win rate")
+        combined_data.append({
+            'Player': f"{perf_emoji} {player}",
+            'Scheduled': games_scheduled,
+            'Played': games_played,
+            'Wins': wins,
+            'Win %': f"{win_percentage:.0f}%" if games_played > 0 else "-",
+            '+/-': point_diff if games_played > 0 else "-",
+            'Play Time': f"{games_scheduled * 15}m",
+        })
+    
+    # Sort by wins, then win percentage, then point differential
+    combined_data.sort(key=lambda x: (
+        x['Wins'],
+        float(x['Win %'].replace('%', '')) if x['Win %'] != "-" else 0,
+        x['+/-'] if x['+/-'] != "-" else 0
+    ), reverse=True)
+    
+    # Add rank for players who have played games
+    rank = 1
+    for i, player_data in enumerate(combined_data):
+        if player_data['Played'] > 0:
+            player_data['Rank'] = rank
+            rank += 1
+        else:
+            player_data['Rank'] = "-"
+    
+    st.write("**Player Stats & Results**")
+    df = pd.DataFrame(combined_data)
+    
+    # Reorder columns for mobile display
+    display_columns = ['Rank', 'Player', 'Scheduled', 'Played', 'Wins', 'Win %', '+/-', 'Play Time']
+    df = df[display_columns]
+    
+    st.dataframe(df, use_container_width=True, hide_index=True)
+    
+    # Summary metrics in compact format
+    games_scheduled = [stats['Scheduled'] for stats in combined_data]
+    min_games = min(games_scheduled) if games_scheduled else 0
+    max_games = max(games_scheduled) if games_scheduled else 0
+    balance_score = "Perfect" if (max_games - min_games) <= 1 else "Good" if (max_games - min_games) <= 2 else "Fair"
+    
+    # Show top 3 if enough players have played
+    players_with_games = [p for p in combined_data if p['Played'] > 0]
+    
+    if len(players_with_games) >= 3:
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.metric("🥇", players_with_games[0]['Player'].split(' ', 1)[1], players_with_games[0]['Win %'])
+        with col2:
+            st.metric("🥈", players_with_games[1]['Player'].split(' ', 1)[1], players_with_games[1]['Win %'])
+        with col3:
+            st.metric("🥉", players_with_games[2]['Player'].split(' ', 1)[1], players_with_games[2]['Win %'])
     else:
-        st.info("🎯 Enter game scores above to see tournament standings!")
+        col1, col2 = st.columns(2)
+        with col1:
+            st.metric("Balance", balance_score)
+        with col2:
+            st.metric("Games Range", f"{min_games}-{max_games}")
 
 def create_csv_export(schedule, player_names):
     """Create clean CSV export with only playing players"""
@@ -679,9 +671,8 @@ def create_csv_export(schedule, player_names):
     return df.to_csv(index=False)
 
 def main():
-    st.title("🏓 Pickleball Doubles Round Robin Scramble")
+    st.title("🏓 Pickleball Doubles Scramble")
     st.write("Generate balanced schedules for your pickleball doubles sessions!")
-    st.info("🎾 **Doubles Format**: Each game has 4 players (2 vs 2). Fair game distribution guaranteed!")
     
     # Sidebar controls
     st.sidebar.header("⚙️ Settings")
@@ -692,11 +683,8 @@ def main():
     # Display info
     schedule_info = calculate_schedule_info(num_players, num_courts, session_hours)
     
-    # Display info in single column for mobile
-    st.write(f"**📊 Session:** {schedule_info['total_games']} games • {schedule_info['games_per_round']} courts • ~{schedule_info['games_per_player']} games/player • {session_hours}h")
-    
-    if num_players > 8:
-        st.info(f"🪑 **Bench System Active**: {schedule_info['sitting_out']} players will rotate through the bench!")
+    # Compact info display
+    st.write(f"**📊** {schedule_info['total_games']} games • {schedule_info['games_per_round']} courts • ~{schedule_info['games_per_player']} games/player • {session_hours}h")
     
     st.write("---")
     
@@ -758,50 +746,50 @@ def main():
         else:
             bench_players, bench_performance = [], {}
     
-    # Generate schedule
-    if st.button("🎯 Generate New Schedule", type="primary"):
-        with st.spinner("Creating balanced schedule..."):
-            random.seed()
-            
-            # Extract player data
-            all_player_names = set()
-            combined_performance = {}
-            
-            for round_games in manual_games:
-                for game in round_games:
-                    for player in game['players']:
-                        all_player_names.add(player)
-                    if 'performance' in game:
-                        combined_performance.update(game['performance'])
-            
-            all_player_names.update(bench_players)
-            combined_performance.update(bench_performance)
-            
-            final_player_names = list(all_player_names)
-            
-            # Add generic names if needed
-            while len(final_player_names) < num_players:
-                final_player_names.append(f"Player {len(final_player_names) + 1}")
-            
-            schedule, player_stats = create_balanced_schedule(
-                num_players, num_courts, final_player_names, 
-                combined_performance, manual_games, bench_players, session_hours
-            )
-            
-            # Store in session state
-            st.session_state.schedule = schedule
-            st.session_state.player_stats = player_stats
-            st.session_state.player_names = final_player_names
-            st.session_state.player_performance = combined_performance
+    # Compact button layout
+    col1, col2, col3, col4 = st.columns(4)
+    
+    with col1:
+        if st.button("🎯 Generate", type="primary"):
+            with st.spinner("Creating schedule..."):
+                random.seed()
+                
+                # Extract player data
+                all_player_names = set()
+                combined_performance = {}
+                
+                for round_games in manual_games:
+                    for game in round_games:
+                        for player in game['players']:
+                            all_player_names.add(player)
+                        if 'performance' in game:
+                            combined_performance.update(game['performance'])
+                
+                all_player_names.update(bench_players)
+                combined_performance.update(bench_performance)
+                
+                final_player_names = list(all_player_names)
+                
+                # Add generic names if needed
+                while len(final_player_names) < num_players:
+                    final_player_names.append(f"Player {len(final_player_names) + 1}")
+                
+                schedule, player_stats = create_balanced_schedule(
+                    num_players, num_courts, final_player_names, 
+                    combined_performance, manual_games, bench_players, session_hours
+                )
+                
+                # Store in session state
+                st.session_state.schedule = schedule
+                st.session_state.player_stats = player_stats
+                st.session_state.player_names = final_player_names
+                st.session_state.player_performance = combined_performance
     
     # Re-run schedule buttons
     if 'schedule' in st.session_state:
-        st.write("---")
-        col1, col2, col3 = st.columns(3)
-        
-        with col1:
-            if st.button("🔄 Re-run", help="Generate new schedule using game results"):
-                with st.spinner("Re-generating schedule based on performance..."):
+        with col2:
+            if st.button("🔄 Re-run"):
+                with st.spinner("Re-generating..."):
                     score_based_performance = analyze_performance_from_scores()
                     updated_performance = st.session_state.get('player_performance', {}).copy()
                     updated_performance.update(score_based_performance)
@@ -817,11 +805,11 @@ def main():
                     st.session_state.player_stats = player_stats
                     st.session_state.player_performance = updated_performance
                     
-                    st.success("🎯 Schedule re-generated! Winners paired with players who need support.")
+                    st.success("🎯 Re-generated!")
         
-        with col2:
-            if st.button("🎲 Randomize", help="Generate completely random new schedule"):
-                with st.spinner("Creating new randomized schedule..."):
+        with col3:
+            if st.button("🎲 Random"):
+                with st.spinner("Randomizing..."):
                     random.seed(int(time.time() * 1000) % 10000)
                     
                     original_performance = st.session_state.get('player_performance', {})
@@ -834,35 +822,34 @@ def main():
                     st.session_state.schedule = schedule
                     st.session_state.player_stats = player_stats
                     
-                    st.success("🎲 New randomized schedule generated!")
+                    st.success("🎲 Randomized!")
         
-        with col3:
-            if st.button("🔁 Reset", help="Clear all data and start fresh"):
+        with col4:
+            if st.button("🔁 Reset"):
                 # Clear all session state data
                 keys_to_clear = ['schedule', 'player_stats', 'player_names', 'player_performance', 'game_results']
                 for key in keys_to_clear:
                     if key in st.session_state:
                         del st.session_state[key]
                 
-                st.success("🔁 All data cleared! Set up your manual games and generate a new schedule.")
+                st.success("🔁 Reset!")
                 st.rerun()
     
     # Display results
     if 'schedule' in st.session_state:
         display_schedule_with_scoring(st.session_state.schedule, st.session_state.player_names)
-        display_player_stats(
+        
+        display_combined_stats_and_results(
             st.session_state.player_stats, 
             st.session_state.player_names,
             st.session_state.get('player_performance', {}),
             session_hours
         )
         
-        display_tournament_results()
-        
         # Download CSV
         csv_data = create_csv_export(st.session_state.schedule, st.session_state.player_names)
         st.download_button(
-            label="📥 Download Schedule as CSV",
+            label="📥 Download CSV",
             data=csv_data,
             file_name="pickleball_schedule.csv",
             mime="text/csv"
