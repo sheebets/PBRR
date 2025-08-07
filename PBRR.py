@@ -276,41 +276,41 @@ def setup_manual_round(round_num, num_courts, key_prefix, all_previous_players=N
         default_value = "Random" if all_previous_players else ""
         
         # Team A
-        team1_p1_col1, team1_p1_col2 = st.sidebar.columns([3, 1])
+        team1_p1_col1, team1_p1_col2 = st.sidebar.columns([2.5, 1])
         with team1_p1_col1:
-            team1_p1_name = st.text_input("Team A Player 1", value=default_value, 
+            team1_p1_name = st.text_input("A1", value=default_value, 
                                         key=f"{key_prefix}_c{court}_t1p1_name",
-                                        placeholder="Enter name or 'Random'...")
+                                        placeholder="Name/Random...")
         with team1_p1_col2:
-            team1_p1_perf = st.selectbox("🔥😐😓", ["😐", "🔥", "😓"], 
+            team1_p1_perf = st.selectbox("", ["😐", "🔥", "😓"], 
                                        key=f"{key_prefix}_c{court}_t1p1_perf")
         
-        team1_p2_col1, team1_p2_col2 = st.sidebar.columns([3, 1])
+        team1_p2_col1, team1_p2_col2 = st.sidebar.columns([2.5, 1])
         with team1_p2_col1:
-            team1_p2_name = st.text_input("Team A Player 2", value=default_value,
+            team1_p2_name = st.text_input("A2", value=default_value,
                                         key=f"{key_prefix}_c{court}_t1p2_name",
-                                        placeholder="Enter name or 'Random'...")
+                                        placeholder="Name/Random...")
         with team1_p2_col2:
-            team1_p2_perf = st.selectbox("🔥😐😓", ["😐", "🔥", "😓"],
+            team1_p2_perf = st.selectbox("", ["😐", "🔥", "😓"],
                                        key=f"{key_prefix}_c{court}_t1p2_perf")
         
         # Team B
-        team2_p1_col1, team2_p1_col2 = st.sidebar.columns([3, 1])
+        team2_p1_col1, team2_p1_col2 = st.sidebar.columns([2.5, 1])
         with team2_p1_col1:
-            team2_p1_name = st.text_input("Team B Player 1", value=default_value,
+            team2_p1_name = st.text_input("B1", value=default_value,
                                         key=f"{key_prefix}_c{court}_t2p1_name",
-                                        placeholder="Enter name or 'Random'...")
+                                        placeholder="Name/Random...")
         with team2_p1_col2:
-            team2_p1_perf = st.selectbox("🔥😐😓", ["😐", "🔥", "😓"],
+            team2_p1_perf = st.selectbox("", ["😐", "🔥", "😓"],
                                        key=f"{key_prefix}_c{court}_t2p1_perf")
         
-        team2_p2_col1, team2_p2_col2 = st.sidebar.columns([3, 1])
+        team2_p2_col1, team2_p2_col2 = st.sidebar.columns([2.5, 1])
         with team2_p2_col1:
-            team2_p2_name = st.text_input("Team B Player 2", value=default_value,
+            team2_p2_name = st.text_input("B2", value=default_value,
                                         key=f"{key_prefix}_c{court}_t2p2_name",
-                                        placeholder="Enter name or 'Random'...")
+                                        placeholder="Name/Random...")
         with team2_p2_col2:
-            team2_p2_perf = st.selectbox("🔥😐😓", ["😐", "🔥", "😓"],
+            team2_p2_perf = st.selectbox("", ["😐", "🔥", "😓"],
                                        key=f"{key_prefix}_c{court}_t2p2_perf")
         
         # Process names
@@ -371,13 +371,13 @@ def setup_bench_players(num_players, manual_games, key_prefix, num_courts):
         bench_performance = {}
         
         for i in range(bench_count):
-            bench_col1, bench_col2 = st.sidebar.columns([3, 1])
+            bench_col1, bench_col2 = st.sidebar.columns([2.5, 1])
             with bench_col1:
-                bench_name = st.text_input(f"Bench Player {i+1}", value="",
+                bench_name = st.text_input(f"Bench {i+1}", value="",
                                          key=f"{key_prefix}_bench_{i}_name",
-                                         placeholder="Enter player name...")
+                                         placeholder="Player name...")
             with bench_col2:
-                bench_perf = st.selectbox("🔥😐😓", ["😐", "🔥", "😓"],
+                bench_perf = st.selectbox("", ["😐", "🔥", "😓"],
                                         key=f"{key_prefix}_bench_{i}_perf")
             
             if bench_name.strip():
@@ -468,11 +468,11 @@ def display_schedule_with_scoring(schedule, player_names):
                     
                     col1, col2 = st.columns(2)
                     with col1:
-                        team_a_score = st.number_input("Team A Score", min_value=0, max_value=50,
+                        team_a_score = st.number_input("A", min_value=0, max_value=50,
                                                      value=st.session_state.game_results.get(game_key, {}).get('team_a_score', 0),
                                                      key=f"score_a_{game_key}")
                     with col2:
-                        team_b_score = st.number_input("Team B Score", min_value=0, max_value=50,
+                        team_b_score = st.number_input("B", min_value=0, max_value=50,
                                                      value=st.session_state.game_results.get(game_key, {}).get('team_b_score', 0),
                                                      key=f"score_b_{game_key}")
                     
@@ -640,8 +640,6 @@ def create_csv_export(schedule, player_names):
 
 def main():
     st.title("🏓 Sheena's Round Robin Scramble")
-    st.write("Algorithm Priority: Fair Game Distribution + Fun & Balanced Matchups")
-    st.info("🎾 **Doubles Format**: 2 vs 2 Only")
     
     # Sidebar controls
     st.sidebar.header("⚙️ Settings")
