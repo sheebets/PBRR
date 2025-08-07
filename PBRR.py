@@ -479,8 +479,6 @@ def analyze_performance_from_scores():
 
 def display_schedule_with_scoring(schedule, player_names):
     """Display the schedule with scoring interface - mobile optimized"""
-    st.header("🏓 Schedule & Scoring")
-    
     if 'game_results' not in st.session_state:
         st.session_state.game_results = {}
     
@@ -503,14 +501,16 @@ def display_schedule_with_scoring(schedule, player_names):
                     
                     game_key = f"r{round_num}_c{game['court']}"
                     
-                    # Compact scoring in three columns
+                    # Compact scoring with player names
                     col1, col2, col3 = st.columns([1, 1, 2])
                     with col1:
-                        team_a_score = st.number_input("A", min_value=0, max_value=50,
+                        team_a_label = f"{game['team1'][0][:3]}&{game['team1'][1][:3]}"
+                        team_a_score = st.number_input(team_a_label, min_value=0, max_value=50,
                                                      value=st.session_state.game_results.get(game_key, {}).get('team_a_score', 0),
                                                      key=f"score_a_{game_key}")
                     with col2:
-                        team_b_score = st.number_input("B", min_value=0, max_value=50,
+                        team_b_label = f"{game['team2'][0][:3]}&{game['team2'][1][:3]}"
+                        team_b_score = st.number_input(team_b_label, min_value=0, max_value=50,
                                                      value=st.session_state.game_results.get(game_key, {}).get('team_b_score', 0),
                                                      key=f"score_b_{game_key}")
                     with col3:
@@ -671,8 +671,8 @@ def create_csv_export(schedule, player_names):
     return df.to_csv(index=False)
 
 def main():
-    st.title("🏓 Sheena's Scramble Round Robin")
-    st.write("The algo will prio equal distribution of games and maybe generate fun matchups 😊!")
+    st.title("🏓 Pickleball Doubles Scramble")
+    st.write("Generate balanced schedules for your pickleball doubles sessions!")
     
     # Sidebar controls
     st.sidebar.header("⚙️ Settings")
@@ -746,11 +746,14 @@ def main():
         else:
             bench_players, bench_performance = [], {}
     
-    # Compact button layout
+    # Compact button layout - smaller for mobile
+    st.write("---")
+    
     col1, col2, col3, col4 = st.columns(4)
     
     with col1:
-        if st.button("🎯 Generate", type="primary"):
+        generate_btn = st.button("🎯", help="Generate new schedule", use_container_width=True)
+        if generate_btn:
             with st.spinner("Creating schedule..."):
                 random.seed()
                 
