@@ -671,8 +671,8 @@ def create_csv_export(schedule, player_names):
     return df.to_csv(index=False)
 
 def main():
-    st.title("🏓 Pickleball Doubles Scramble")
-    st.write("Generate balanced schedules for your pickleball doubles sessions!")
+    st.title("🏓 Sheena's PB Doubles RR Scramble")
+    st.write("Algo prioritizes equal game distribution.. then maybe generate fun mathcups!")
     
     # Sidebar controls
     st.sidebar.header("⚙️ Settings")
@@ -749,10 +749,11 @@ def main():
     # Compact button layout - smaller for mobile
     st.write("---")
     
+    # Single row with text and emojis
     col1, col2, col3, col4 = st.columns(4)
     
     with col1:
-        generate_btn = st.button("🎯", help="Generate new schedule", use_container_width=True)
+        generate_btn = st.button("🎯 Generate", use_container_width=True)
         if generate_btn:
             with st.spinner("Creating schedule..."):
                 random.seed()
