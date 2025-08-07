@@ -671,14 +671,14 @@ def create_csv_export(schedule, player_names):
     return df.to_csv(index=False)
 
 def main():
-    st.title("🏓 Pickleball Doubles Scramble")
-    st.write("Generate balanced schedules for your pickleball doubles sessions!")
+    st.title("🏓 Sheena's Scramble Round Robin")
+    st.write("The algo will prio equal distribution of games and maybe generate fun matchups 😊!")
     
     # Sidebar controls
     st.sidebar.header("⚙️ Settings")
-    num_players = st.sidebar.slider("Number of Players", min_value=4, max_value=20, value=4)
-    num_courts = st.sidebar.slider("Number of Courts", min_value=1, max_value=5, value=1)
-    session_hours = st.sidebar.slider("Session Duration (hours)", min_value=1, max_value=5, value=2)
+    num_players = st.sidebar.selectbox("Players", options=list(range(4, 25)), index=0)
+    num_courts = st.sidebar.selectbox("Courts", options=list(range(1, 5)), index=0)
+    session_hours = st.sidebar.selectbox("Hours", options=list(range(1, 9)), index=1)
     
     # Display info
     schedule_info = calculate_schedule_info(num_players, num_courts, session_hours)
