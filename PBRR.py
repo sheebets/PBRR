@@ -544,7 +544,7 @@ def display_schedule_with_scoring(schedule, player_names):
 
 def display_player_stats(player_stats, player_names, player_performance=None, session_hours=2):
     """Display player statistics"""
-    st.header("📊 Player Statistics")
+    st.write("**Player Statistics**")
     
     stats_data = []
     total_minutes = session_hours * 60
@@ -587,7 +587,7 @@ def display_tournament_results():
     if 'game_results' not in st.session_state or not st.session_state.game_results:
         return
     
-    st.header("🏆 Tournament Results & Standings")
+    st.write("**Tournament Results**")
     
     player_stats = defaultdict(lambda: {
         'games_played': 0, 'wins': 0, 'losses': 0,
@@ -639,7 +639,7 @@ def display_tournament_results():
             standings_df = pd.DataFrame(standings_data)
             standings_df = standings_df[['Rank', 'Player', 'Games', 'Wins', 'Losses', 'Win %', 'Points For', 'Points Against', '+/-']]
             
-            st.subheader("📊 Final Standings")
+            st.write("**Final Standings**")
             st.dataframe(standings_df, use_container_width=True, hide_index=True)
             
             if len(standings_data) >= 3:
