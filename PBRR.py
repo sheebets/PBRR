@@ -667,8 +667,8 @@ def create_csv_export(schedule, player_names):
     return df.to_csv(index=False)
 
 def main():
-    st.title("🏓 Sheena's Doubles RR Scramble")
-    st.write("Algo prioritizes equal game distribution... then maybe generate fun mathcups!")
+    st.title("🏓 Sheena's PB Doubles RR Scramble")
+    st.write("Algo prioritizes equal game distribution.. then maybe generate fun mathcups!")
     
     # Sidebar controls
     st.sidebar.header("⚙️ Settings")
