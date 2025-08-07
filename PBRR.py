@@ -318,7 +318,7 @@ def setup_manual_round(round_num, num_courts, key_prefix, all_previous_players=N
         # Team A
         team1_p1_col1, team1_p1_col2 = st.sidebar.columns([2.5, 1])
         with team1_p1_col1:
-            team1_p1_name = st.text_input("A1", value=default_value, 
+            team1_p1_name = st.text_input("Team A, Player 1", value=default_value, 
                                         key=f"{key_prefix}_c{court}_t1p1_name",
                                         placeholder="Name/Random...")
         with team1_p1_col2:
@@ -327,7 +327,7 @@ def setup_manual_round(round_num, num_courts, key_prefix, all_previous_players=N
         
         team1_p2_col1, team1_p2_col2 = st.sidebar.columns([2.5, 1])
         with team1_p2_col1:
-            team1_p2_name = st.text_input("A2", value=default_value,
+            team1_p2_name = st.text_input("Team A, Player 2", value=default_value,
                                         key=f"{key_prefix}_c{court}_t1p2_name",
                                         placeholder="Name/Random...")
         with team1_p2_col2:
@@ -337,7 +337,7 @@ def setup_manual_round(round_num, num_courts, key_prefix, all_previous_players=N
         # Team B
         team2_p1_col1, team2_p1_col2 = st.sidebar.columns([2.5, 1])
         with team2_p1_col1:
-            team2_p1_name = st.text_input("B1", value=default_value,
+            team2_p1_name = st.text_input("Team B, Player 1", value=default_value,
                                         key=f"{key_prefix}_c{court}_t2p1_name",
                                         placeholder="Name/Random...")
         with team2_p1_col2:
@@ -346,7 +346,7 @@ def setup_manual_round(round_num, num_courts, key_prefix, all_previous_players=N
         
         team2_p2_col1, team2_p2_col2 = st.sidebar.columns([2.5, 1])
         with team2_p2_col1:
-            team2_p2_name = st.text_input("B2", value=default_value,
+            team2_p2_name = st.text_input("Team B, Player 2", value=default_value,
                                         key=f"{key_prefix}_c{court}_t2p2_name",
                                         placeholder="Name/Random...")
         with team2_p2_col2:
@@ -490,48 +490,44 @@ def display_schedule_with_scoring(schedule, player_names):
         is_manual = round_data.get('manual', False)
         
         manual_indicator = " 🎮" if is_manual else " 🤖"
-        st.subheader(f"Round {round_num} ({(round_num-1)*15}-{round_num*15}min){manual_indicator}")
         
-        if games:
-            # Use single column for mobile
-            for game in games:
-                with st.container():
-                    # Compact one-line format
-                    st.markdown(f"**Court {game['court']}:** {game['team1'][0]} & {game['team1'][1]} vs {game['team2'][0]} & {game['team2'][1]}")
+        # Display each court separately
+        for game in games:
+            st.subheader(f"Court {game['court']}, Round {round_num} ({(round_num-1)*15}-{round_num*15}min){manual_indicator}")
+            
+            game_key = f"r{round_num}_c{game['court']}"
+            
+            # Compact scoring with player names
+            col1, col2, col3 = st.columns([1, 1, 2])
+            with col1:
+                team_a_label = f"{game['team1'][0]} & {game['team1'][1]}"
+                team_a_score = st.number_input(team_a_label, min_value=0, max_value=50,
+                                             value=st.session_state.game_results.get(game_key, {}).get('team_a_score', 0),
+                                             key=f"score_a_{game_key}")
+            with col2:
+                team_b_label = f"{game['team2'][0]} & {game['team2'][1]}"
+                team_b_score = st.number_input(team_b_label, min_value=0, max_value=50,
+                                             value=st.session_state.game_results.get(game_key, {}).get('team_b_score', 0),
+                                             key=f"score_b_{game_key}")
+            with col3:
+                if team_a_score > 0 or team_b_score > 0:
+                    winner_team = "Team A" if team_a_score > team_b_score else "Team B" if team_b_score > team_a_score else "Tie"
                     
-                    game_key = f"r{round_num}_c{game['court']}"
+                    st.session_state.game_results[game_key] = {
+                        'round': round_num, 'court': game['court'],
+                        'team_a': game['team1'], 'team_b': game['team2'],
+                        'team_a_score': team_a_score, 'team_b_score': team_b_score,
+                        'winner': winner_team,
+                        'winning_team': game['team1'] if winner_team == "Team A" else game['team2'] if winner_team == "Team B" else None
+                    }
                     
-                    # Compact scoring with player names
-                    col1, col2, col3 = st.columns([1, 1, 2])
-                    with col1:
-                        team_a_label = f"{game['team1'][0][:3]}&{game['team1'][1][:3]}"
-                        team_a_score = st.number_input(team_a_label, min_value=0, max_value=50,
-                                                     value=st.session_state.game_results.get(game_key, {}).get('team_a_score', 0),
-                                                     key=f"score_a_{game_key}")
-                    with col2:
-                        team_b_label = f"{game['team2'][0][:3]}&{game['team2'][1][:3]}"
-                        team_b_score = st.number_input(team_b_label, min_value=0, max_value=50,
-                                                     value=st.session_state.game_results.get(game_key, {}).get('team_b_score', 0),
-                                                     key=f"score_b_{game_key}")
-                    with col3:
-                        if team_a_score > 0 or team_b_score > 0:
-                            winner_team = "Team A" if team_a_score > team_b_score else "Team B" if team_b_score > team_a_score else "Tie"
-                            
-                            st.session_state.game_results[game_key] = {
-                                'round': round_num, 'court': game['court'],
-                                'team_a': game['team1'], 'team_b': game['team2'],
-                                'team_a_score': team_a_score, 'team_b_score': team_b_score,
-                                'winner': winner_team,
-                                'winning_team': game['team1'] if winner_team == "Team A" else game['team2'] if winner_team == "Team B" else None
-                            }
-                            
-                            if winner_team != "Tie":
-                                winning_players = game['team1'] if winner_team == "Team A" else game['team2']
-                                st.success(f"🏆 {' & '.join(winning_players)}")
-                            else:
-                                st.info(f"🤝 Tie")
-                    
-                    st.markdown("---")
+                    if winner_team != "Tie":
+                        winning_players = game['team1'] if winner_team == "Team A" else game['team2']
+                        st.success(f"🏆 {' & '.join(winning_players)}")
+                    else:
+                        st.info(f"🤝 Tie")
+            
+            st.markdown("---")
         
         # Compact sitting display
         if bench:
@@ -671,8 +667,8 @@ def create_csv_export(schedule, player_names):
     return df.to_csv(index=False)
 
 def main():
-    st.title("🏓 Sheena's PB Doubles RR Scramble")
-    st.write("Algo prioritizes equal game distribution.. then maybe generate fun mathcups!")
+    st.title("🏓 Sheena's Doubles RR Scramble")
+    st.write("Algo prioritizes equal game distribution... then maybe generate fun mathcups!")
     
     # Sidebar controls
     st.sidebar.header("⚙️ Settings")
