@@ -46,13 +46,14 @@ def assign_balanced_teams(game_players, player_performance=None):
     return team1, team2
 
 def create_balanced_schedule(num_players, num_courts, all_players, combined_performance, manual_games, bench_players, session_hours=2):
-    """Create a balanced round robin schedule with fair game distribution and TRUE scramble"""
+    """Create a balanced round robin schedule with fair game distribution, TRUE scramble, and REST consideration"""
     schedule_info = calculate_schedule_info(num_players, num_courts, session_hours)
     
     player_games = defaultdict(int)
     player_partners = defaultdict(set)
     player_opponents = defaultdict(set)
     player_bench_time = defaultdict(int)
+    player_last_played = defaultdict(int)  # Track when each player last played
     
     schedule = []
     start_round = 0
@@ -81,10 +82,11 @@ def create_balanced_schedule(num_players, num_courts, all_players, combined_perf
                 'manual': True
             })
             
-            # Update tracking for partnerships/opponents
+            # Update tracking for partnerships/opponents and last played
             for game in round_games:
                 for player in game['players']:
                     player_games[player] += 1
+                    player_last_played[player] = round_num + 1  # Track when they last played
                     
                     if player in game['team1']:
                         partner = game['team1'][1] if game['team1'][0] == player else game['team1'][0]
@@ -100,7 +102,7 @@ def create_balanced_schedule(num_players, num_courts, all_players, combined_perf
                 
             start_round = round_num + 1
     
-    # Generate remaining rounds with TRUE scramble logic
+    # Generate remaining rounds with TRUE scramble logic + REST consideration
     for round_num in range(start_round, schedule_info['total_games']):
         round_games = []
         
@@ -108,7 +110,32 @@ def create_balanced_schedule(num_players, num_courts, all_players, combined_perf
         min_games = min(player_games[p] for p in all_players)
         available_players = [p for p in all_players if player_games[p] <= min_games + 1]
         
-        # Step 2: Special considerations
+        # Step 2: Apply REST penalties - make recently played players less likely to be selected
+        player_selection_scores = {}
+        for player in available_players:
+            score = 0
+            
+            # Base score prioritizes players with fewer games
+            score += (10 - player_games[player]) * 100  # Game distribution priority
+            
+            # REST PENALTY: Penalize players who played recently
+            last_played = player_last_played.get(player, 0)
+            rounds_since_played = round_num + 1 - last_played
+            
+            if rounds_since_played == 1:  # Played last round
+                score -= 200  # Strong penalty - less likely to play again immediately
+            elif rounds_since_played == 0:  # Played this round (manual games)
+                score -= 500  # Very strong penalty
+            else:
+                score += rounds_since_played * 50  # Bonus for more rest
+            
+            # Bench priority
+            if player in bench_players:
+                score += 100
+                
+            player_selection_scores[player] = score
+        
+        # Step 3: Special considerations
         if num_courts == 1 and round_num == 1 and round_1_players:
             non_round1_available = [p for p in available_players if p not in round_1_players]
             if len(non_round1_available) >= 4:
@@ -129,42 +156,54 @@ def create_balanced_schedule(num_players, num_courts, all_players, combined_perf
             if len(remaining_players) < 4:
                 break
             
-            # Step 3: TRUE SCRAMBLE - Find best combination, but ALWAYS pick something
+            # Step 4: TRUE SCRAMBLE with REST consideration
             best_combination = None
-            best_variety_score = -1
+            best_total_score = -1
             
-            # Try multiple random combinations of 4 players
-            for attempt in range(50):  # Try 50 random combinations
+            # Try multiple random combinations
+            for attempt in range(50):
                 if len(remaining_players) >= 4:
-                    # Randomly select 4 players, but prioritize those with fewer games
-                    remaining_sorted = sorted(remaining_players, key=lambda p: (
-                        player_games[p],  # Fewest games first
-                        random.random()   # Random tiebreaker
-                    ))
+                    # Weight selection by rest + game distribution scores
+                    weighted_candidates = []
+                    for player in remaining_players:
+                        weight = max(1, player_selection_scores.get(player, 0))
+                        weighted_candidates.extend([player] * max(1, int(weight // 100)))
                     
-                    # Select from top candidates (those with fewest games)
-                    min_game_count = player_games[remaining_sorted[0]]
-                    candidates = [p for p in remaining_sorted if player_games[p] <= min_game_count + 1]
+                    # Select 4 players with weighted probability
+                    if len(weighted_candidates) >= 4:
+                        selected_4 = []
+                        temp_candidates = weighted_candidates[:]
+                        for _ in range(4):
+                            if temp_candidates:
+                                player = random.choice(temp_candidates)
+                                if player not in selected_4:
+                                    selected_4.append(player)
+                                # Remove all instances to avoid duplicates
+                                temp_candidates = [p for p in temp_candidates if p != player]
                     
-                    if len(candidates) >= 4:
-                        selected_4 = random.sample(candidates, 4)
-                    else:
+                    # Fallback to simple selection if weighted doesn't work
+                    if len(selected_4) < 4:
+                        remaining_sorted = sorted(remaining_players, 
+                                                key=lambda p: (-player_selection_scores.get(p, 0), random.random()))
                         selected_4 = remaining_sorted[:4]
                     
-                    # Calculate variety score for this combination
+                    # Calculate variety + rest score for this combination
                     variety_score = calculate_variety_score(selected_4, player_partners, player_opponents)
+                    rest_score = sum(player_selection_scores.get(p, 0) for p in selected_4)
+                    total_score = variety_score + (rest_score // 10)  # Scale rest score down
                     
-                    if variety_score > best_variety_score:
-                        best_variety_score = variety_score
+                    if total_score > best_total_score:
+                        best_total_score = total_score
                         best_combination = selected_4
             
-            # FALLBACK: If no combination found (shouldn't happen), just take first 4
+            # FALLBACK: If no combination found, just take best rested players
             if not best_combination and len(remaining_players) >= 4:
-                remaining_sorted = sorted(remaining_players, key=lambda p: player_games[p])
+                remaining_sorted = sorted(remaining_players, 
+                                        key=lambda p: (-player_selection_scores.get(p, 0), player_games[p]))
                 best_combination = remaining_sorted[:4]
             
             if best_combination:
-                # Step 4: Assign teams with variety focus, but don't be too picky
+                # Step 5: Assign teams with variety focus
                 team1, team2 = assign_scrambled_teams(best_combination, player_partners, combined_performance)
                 
                 round_games.append({
@@ -178,6 +217,7 @@ def create_balanced_schedule(num_players, num_courts, all_players, combined_perf
                 for player in best_combination:
                     selected_players.add(player)
                     player_games[player] += 1
+                    player_last_played[player] = round_num + 1  # Update last played round
                     
                     if player in team1:
                         partner = team1[1] if team1[0] == player else team1[0]
@@ -639,7 +679,9 @@ def create_csv_export(schedule, player_names):
     return df.to_csv(index=False)
 
 def main():
-    st.title("🏓 Sheena's Round Robin Scramble")
+    st.title("🏓 Pickleball Doubles Round Robin Scramble")
+    st.write("Generate balanced schedules for your pickleball doubles sessions!")
+    st.info("🎾 **Doubles Format**: Each game has 4 players (2 vs 2). Fair game distribution guaranteed!")
     
     # Sidebar controls
     st.sidebar.header("⚙️ Settings")
@@ -650,15 +692,8 @@ def main():
     # Display info
     schedule_info = calculate_schedule_info(num_players, num_courts, session_hours)
     
-    col1, col2, col3, col4 = st.columns(4)
-    with col1:
-        st.metric("Total Games", schedule_info['total_games'])
-    with col2:
-        st.metric("Courts Playing", schedule_info['games_per_round'])
-    with col3:
-        st.metric("Games per Player", f"~{schedule_info['games_per_player']}")
-    with col4:
-        st.metric("Session Duration", f"{session_hours} hours")
+    # Display info in single column for mobile
+    st.write(f"**📊 Session:** {schedule_info['total_games']} games • {schedule_info['games_per_round']} courts • ~{schedule_info['games_per_player']} games/player • {session_hours}h")
     
     if num_players > 8:
         st.info(f"🪑 **Bench System Active**: {schedule_info['sitting_out']} players will rotate through the bench!")
