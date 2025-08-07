@@ -682,8 +682,6 @@ def main():
     # Compact info display
     st.write(f"**📊** {schedule_info['total_games']} games • {schedule_info['games_per_round']} courts • ~{schedule_info['games_per_player']} games/player • {session_hours}h")
     
-    st.write("---")
-    
     # Manual game setup
     st.sidebar.header("🎮 Manual Game Setup")
     manual_games = []
