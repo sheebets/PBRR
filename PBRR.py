@@ -797,10 +797,10 @@ def main():
     # Re-run schedule buttons
     if 'schedule' in st.session_state:
         st.write("---")
-        col1, col2 = st.columns(2)
+        col1, col2, col3 = st.columns(3)
         
         with col1:
-            if st.button("🔄 Re-run Schedule", help="Generate new schedule using game results"):
+            if st.button("🔄 Re-run", help="Generate new schedule using game results"):
                 with st.spinner("Re-generating schedule based on performance..."):
                     score_based_performance = analyze_performance_from_scores()
                     updated_performance = st.session_state.get('player_performance', {}).copy()
@@ -820,7 +820,7 @@ def main():
                     st.success("🎯 Schedule re-generated! Winners paired with players who need support.")
         
         with col2:
-            if st.button("🎲 Randomize Schedule", help="Generate completely random new schedule"):
+            if st.button("🎲 Randomize", help="Generate completely random new schedule"):
                 with st.spinner("Creating new randomized schedule..."):
                     random.seed(int(time.time() * 1000) % 10000)
                     
@@ -835,6 +835,17 @@ def main():
                     st.session_state.player_stats = player_stats
                     
                     st.success("🎲 New randomized schedule generated!")
+        
+        with col3:
+            if st.button("🔁 Reset", help="Clear all data and start fresh"):
+                # Clear all session state data
+                keys_to_clear = ['schedule', 'player_stats', 'player_names', 'player_performance', 'game_results']
+                for key in keys_to_clear:
+                    if key in st.session_state:
+                        del st.session_state[key]
+                
+                st.success("🔁 All data cleared! Set up your manual games and generate a new schedule.")
+                st.rerun()
     
     # Display results
     if 'schedule' in st.session_state:
