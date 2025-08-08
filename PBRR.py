@@ -639,4 +639,177 @@ def display_combined_stats_and_results(player_stats, player_names, player_perfor
         with col1:
             st.metric("Balance", balance_score)
         with col2:
-            st.metric("Games Range
+            st.metric("Games Range", f"{min_games}-{max_games}")
+
+def create_csv_export(schedule, player_names):
+    """Create clean CSV export with only playing players"""
+    csv_data = []
+    
+    for round_data in schedule:
+        round_num = round_data['round']
+        start_time = (round_num - 1) * 15
+        end_time = round_num * 15
+        
+        # Only include actual games, not sitting players
+        for game in round_data['games']:
+            csv_data.append({
+                'Round': round_num,
+                'Start Time': f"{start_time} min",
+                'End Time': f"{end_time} min", 
+                'Court': game['court'],
+                'Team A Player 1': game['team1'][0],
+                'Team A Player 2': game['team1'][1],
+                'Team B Player 1': game['team2'][0],
+                'Team B Player 2': game['team2'][1]
+            })
+    
+    df = pd.DataFrame(csv_data)
+    return df.to_csv(index=False)
+
+def main():
+    st.title("🏓 Sheena's PB Doubles RR Scramble")
+    st.write("Algo prioritizes equal game distribution.. then maybe generate fun matchups!")
+    
+    # Sidebar controls
+    st.sidebar.header("⚙️ Settings")
+    num_players = st.sidebar.selectbox("Players", options=list(range(4, 25)), index=0)
+    num_courts = st.sidebar.selectbox("Courts", options=list(range(1, 5)), index=0)
+    session_hours = st.sidebar.selectbox("Hours", options=list(range(1, 9)), index=1)
+    
+    # Display info
+    schedule_info = calculate_schedule_info(num_players, num_courts, session_hours)
+    
+    # Compact info display
+    st.write(f"**📊** {schedule_info['total_games']} games • {schedule_info['games_per_round']} courts • ~{schedule_info['games_per_player']} games/player • {session_hours}h")
+    
+    # Manual game setup
+    st.sidebar.header("🎮 Manual Game Setup")
+    manual_games = []
+    
+    # Game 1 - Always show
+    st.sidebar.write("**Game 1 (0-15 min):**")
+    game1 = setup_manual_round(1, num_courts, "manual_r1")
+    manual_games.append(game1)
+    
+    # Calculate how many players can play in Game 1
+    max_game1_players = num_courts * 4
+    overflow_players = num_players - max_game1_players
+    
+    # Decision logic for overflow players
+    if overflow_players <= 0:
+        # All players fit in Game 1
+        bench_players, bench_performance = [], {}
+        st.sidebar.info(f"✅ All {num_players} players can play simultaneously in Game 1")
+        
+    elif overflow_players < max_game1_players:
+        # Overflow is less than a full game -> Use bench system
+        bench_players, bench_performance = setup_bench_players(num_players, manual_games, "bench", num_courts)
+        st.sidebar.info(f"💡 {overflow_players} player(s) will rotate from bench into auto-generated rounds")
+        
+    else:
+        # Large overflow (full game worth or more) -> Use Game 2 system
+        game1_players = set()
+        for game in game1:
+            game1_players.update(game['players'])
+        
+        # Game 2 for significant overflow
+        st.sidebar.write("**Game 2 (15-30 min):**")
+        st.sidebar.info("💡 Leave blank or type 'Random' for random selection")
+        game2 = setup_manual_round(2, num_courts, "manual_r2", game1_players)
+        manual_games.append(game2)
+        
+        # Check if we need Game 3
+        max_game2_players = max_game1_players * 2
+        if num_players > max_game2_players:
+            game2_players = set()
+            for game in game2:
+                game2_players.update(game['players'])
+            all_previous_players = game1_players.union(game2_players)
+            
+            st.sidebar.write("**Game 3 (30-45 min):**")
+            st.sidebar.info("💡 Leave blank or type 'Random' for random selection")
+            game3 = setup_manual_round(3, num_courts, "manual_r3", all_previous_players)
+            manual_games.append(game3)
+        
+        # For Game 2+ system, calculate remaining bench players
+        total_manual_capacity = len(manual_games) * max_game1_players
+        remaining_players = max(0, num_players - total_manual_capacity)
+        
+        if remaining_players > 0:
+            bench_players, bench_performance = setup_bench_players(remaining_players, manual_games, "bench", num_courts)
+        else:
+            bench_players, bench_performance = [], {}
+    
+    # Buttons - only Generate and Reset
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        generate_btn = st.button("🎯 Generate", use_container_width=True)
+        if generate_btn:
+            with st.spinner("Creating schedule..."):
+                random.seed()
+                
+                # Extract player data
+                all_player_names = set()
+                combined_performance = {}
+                
+                for round_games in manual_games:
+                    for game in round_games:
+                        for player in game['players']:
+                            all_player_names.add(player)
+                        if 'performance' in game:
+                            combined_performance.update(game['performance'])
+                
+                all_player_names.update(bench_players)
+                combined_performance.update(bench_performance)
+                
+                final_player_names = list(all_player_names)
+                
+                # Add generic names if needed
+                while len(final_player_names) < num_players:
+                    final_player_names.append(f"Player {len(final_player_names) + 1}")
+                
+                schedule, player_stats = create_balanced_schedule(
+                    num_players, num_courts, final_player_names, 
+                    combined_performance, manual_games, bench_players, session_hours
+                )
+                
+                # Store in session state
+                st.session_state.schedule = schedule
+                st.session_state.player_stats = player_stats
+                st.session_state.player_names = final_player_names
+                st.session_state.player_performance = combined_performance
+    
+    with col2:
+        if st.button("🔁 Reset", use_container_width=True):
+            # Clear all session state data
+            keys_to_clear = ['schedule', 'player_stats', 'player_names', 'player_performance', 'game_results']
+            for key in keys_to_clear:
+                if key in st.session_state:
+                    del st.session_state[key]
+            
+            st.success("🔁 Reset!")
+            st.rerun()
+    
+    # Display results
+    if 'schedule' in st.session_state:
+        display_schedule_with_scoring(st.session_state.schedule, st.session_state.player_names)
+        
+        display_combined_stats_and_results(
+            st.session_state.player_stats, 
+            st.session_state.player_names,
+            st.session_state.get('player_performance', {}),
+            session_hours
+        )
+        
+        # Download CSV
+        csv_data = create_csv_export(st.session_state.schedule, st.session_state.player_names)
+        st.download_button(
+            label="📥 Download CSV",
+            data=csv_data,
+            file_name="pickleball_schedule.csv",
+            mime="text/csv"
+        )
+
+if __name__ == "__main__":
+    main()
